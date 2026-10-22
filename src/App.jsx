@@ -1,7 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:7001/api/users";
+const API_BASE = "https://stingily-elusive-enjoyably.ngrok-free.dev";
+const API_URL = `${API_BASE}/api/users`;
+const NGROK_HEADERS = { "ngrok-skip-browser-warning": "true" };
 
 const initialForm = {
   name: "",
@@ -15,14 +16,33 @@ const initialForm = {
 
 export default function App() {
   const [formData, setFormData] = useState(initialForm);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    const maxTotalSize = 200 * 1024 * 1024; // 200 MB
+
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+
+    if (totalSize > maxTotalSize) {
+      setError("All selected files combined must be 200 MB or less.");
+      e.target.value = "";
+      setSelectedFiles([]);
+      return;
+    }
+
+    setError("");
+    setSelectedFiles(files);
+  };
+
   const fetchUsers = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(API_URL, { headers: NGROK_HEADERS });
       if (!response.ok) throw new Error("Failed to fetch users");
 
       const data = await response.json();
@@ -50,12 +70,19 @@ export default function App() {
     setSuccess("");
 
     try {
+      const body = new FormData();
+
+      Object.entries(formData).forEach(([key, value]) => {
+        body.append(key, value);
+      });
+
+      selectedFiles.forEach((file) => {
+        body.append("files", file);
+      });
+
       const response = await fetch(API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        body,
       });
 
       const data = await response.json();
@@ -66,7 +93,7 @@ export default function App() {
 
       setSuccess(data.message);
       setFormData(initialForm);
-
+      setSelectedFiles([]);
       await fetchUsers();
     } catch (err) {
       setError(err.message);
@@ -75,6 +102,42 @@ export default function App() {
     }
   };
 
+  function SecureImage({ path, alt }) {
+    const [src, setSrc] = useState("");
+
+    useEffect(() => {
+      let url;
+      let cancelled = false;
+
+      fetch(`${API_BASE}/${path}`, { headers: NGROK_HEADERS })
+        .then((r) => (r.ok ? r.blob() : Promise.reject()))
+        .then((blob) => {
+          if (cancelled) return;
+          url = URL.createObjectURL(blob);
+          setSrc(url);
+        })
+        .catch(() => {});
+
+      return () => {
+        cancelled = true;
+        if (url) URL.revokeObjectURL(url);
+      };
+    }, [path]);
+
+    if (!src)
+      return (
+        <div className="mb-3 h-40 w-full animate-pulse rounded-lg bg-gray-100" />
+      );
+
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="mb-3 h-40 w-full rounded-lg border bg-gray-50 object-contain"
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
       <div className="mx-auto max-w-3xl rounded-2xl bg-white p-6 shadow-lg sm:p-8">
@@ -82,12 +145,13 @@ export default function App() {
           Registration Form
         </h1>
 
-        <p className="mb-6 text-gray-500">
-          Submit your details to PostgreSQL.
-        </p>
+        <p className="mb-6 text-gray-500">Submit your details to PostgreSQL.</p>
 
         {error && (
-          <p role="alert" className="mb-4 rounded-lg bg-red-100 p-3 text-red-700">
+          <p
+            role="alert"
+            className="mb-4 rounded-lg bg-red-100 p-3 text-red-700"
+          >
             {error}
           </p>
         )}
@@ -152,6 +216,47 @@ export default function App() {
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="files"
+              className="mb-2 block font-medium text-gray-700"
+            >
+              Upload Files (up to 200 MB total)
+            </label>
+
+            <input
+              id="files"
+              name="files"
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="block w-full rounded-lg border border-gray-300 p-3"
+            />
+
+            <p className="mt-2 text-sm text-gray-500">
+              Select multiple files at once. Combined size limit: 200 MB.
+            </p>
+
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 rounded-lg bg-gray-50 p-3">
+                <p className="mb-2 font-medium">
+                  Selected files: {selectedFiles.length}
+                </p>
+
+                <ul className="space-y-1">
+                  {selectedFiles.map((file, index) => (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="break-all text-sm text-gray-600"
+                    >
+                      {file.name} — {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -184,22 +289,55 @@ export default function App() {
                 <th className="p-3">Email</th>
                 <th className="p-3">Phone</th>
                 <th className="p-3">City</th>
+                <th className="p-3">Files</th>
               </tr>
             </thead>
 
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b">
+                <tr key={user.id} className="border-b align-top">
                   <td className="p-3">{user.name}</td>
                   <td className="p-3">{user.email}</td>
                   <td className="p-3">{user.phone}</td>
                   <td className="p-3">{user.city}</td>
+                  <td className="min-w-64 p-3">
+                    {user.files?.length > 0 ? (
+                      <div className="space-y-3">
+                        {user.files.map((file) => (
+                          <div
+                            key={file.id}
+                            className="rounded-lg border border-gray-200 bg-white p-3"
+                          >
+                            {file.mimeType?.startsWith("image/") && (
+                              <SecureImage
+                                path={file.relativePath}
+                                alt={file.originalName}
+                              />
+                            )}
+                            <p className="break-all font-medium text-gray-800">
+                              {file.originalName}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500">
+                              {(Number(file.sizeBytes) / (1024 * 1024)).toFixed(
+                                2,
+                              )}{" "}
+                              MB · {file.mimeType}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">
+                        No files uploaded
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="p-5 text-center text-gray-500">
+                  <td colSpan={5} className="p-5 text-center text-gray-500">
                     No users found.
                   </td>
                 </tr>

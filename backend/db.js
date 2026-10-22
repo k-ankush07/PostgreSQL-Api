@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const { Pool } = require("pg");
@@ -8,6 +9,10 @@ const pool = new Pool({
   database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
+});
+
+pool.on("error", (err) => {
+  console.error("PostgreSQL pool error:", err.message);
 });
 
 module.exports = pool;
