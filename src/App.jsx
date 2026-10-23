@@ -94,7 +94,7 @@ export default function App() {
       setSuccess(data.message);
       setFormData(initialForm);
       setSelectedFiles([]);
-      await fetchUsers();
+      fetchUsers();
     } catch (err) {
       setError(err.message);
     } finally {
