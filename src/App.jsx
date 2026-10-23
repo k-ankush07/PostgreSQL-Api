@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 
-const API_BASE = "https://stingily-elusive-enjoyably.ngrok-free.dev";
+const API_BASE = "";
 const API_URL = `${API_BASE}/api/users`;
-const NGROK_HEADERS = { "ngrok-skip-browser-warning": "true" };
-
+const NGROK_HEADERS = {};
+ 
 const initialForm = {
   name: "",
   email: "",
@@ -25,7 +25,7 @@ export default function App() {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
-    const maxTotalSize = 200 * 1024 * 1024; // 200 MB
+    const maxTotalSize = 200 * 1024 * 1024; 
 
     const totalSize = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -289,7 +289,8 @@ export default function App() {
                 <th className="p-3">Email</th>
                 <th className="p-3">Phone</th>
                 <th className="p-3">City</th>
-                <th className="p-3">Files</th>
+                <th className="p-3">Message</th>
+                 <th className="p-3">Files</th>
               </tr>
             </thead>
 
@@ -300,6 +301,7 @@ export default function App() {
                   <td className="p-3">{user.email}</td>
                   <td className="p-3">{user.phone}</td>
                   <td className="p-3">{user.city}</td>
+                   <td className="p-3">{user.message}</td>
                   <td className="min-w-64 p-3">
                     {user.files?.length > 0 ? (
                       <div className="space-y-3">

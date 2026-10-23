@@ -5,6 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    allowedHosts: ['acres-doom-fri-arabia.trycloudflare.com'],
+    allowedHosts: ['.trycloudflare.com'],
+    proxy: {
+      '/api': 'http://localhost:7001',
+      '/uploads': 'http://localhost:7001',
+    },
   },
 })

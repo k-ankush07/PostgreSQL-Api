@@ -13,7 +13,7 @@ const pool = require("./db");
 
 const app = express();
 
-const MAX_TOTAL_SIZE = 200 * 1024 * 1024; // 200 MB
+const MAX_TOTAL_SIZE = 200 * 1024 * 1024; 
 const MAX_FILES = 20;
 
 const uploadDir = path.join(__dirname, "uploads");
